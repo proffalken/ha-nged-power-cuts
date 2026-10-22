@@ -29,3 +29,17 @@ jobs:
 
       - name: Pytest
         run: uv run pytest -v --cov=custom_components.nged_power_cuts --cov-report=term-missing
+
+  dashboard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+
+      - name: Dashboard strategy tests
+        run: npm test

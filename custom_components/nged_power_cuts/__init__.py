@@ -5,12 +5,15 @@ from __future__ import annotations
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
 
 from .api import NGEDApiClient
 from .config_flow import radius_km
-from .const import CONF_POSTCODE
+from .const import CONF_POSTCODE, DOMAIN
 from .coordinator import PowerCutsCoordinator
+from .dashboard import async_register_dashboard_strategy
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -18,7 +21,15 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
 ]
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 type NGEDPowerCutsConfigEntry = ConfigEntry[PowerCutsCoordinator]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Serve the dashboard strategy, once, however many entries there are."""
+    await async_register_dashboard_strategy(hass)
+    return True
 
 
 async def async_setup_entry(

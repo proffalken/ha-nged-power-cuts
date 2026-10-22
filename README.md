@@ -55,7 +55,7 @@ entities.
 
 | Entity | State | Attributes |
 | --- | --- | --- |
-| Power cut (binary sensor, problem) | On while NGED lists your postcode in a power cut that has started. Planned work counts from its planned start. | `power_cuts`: the cuts at your postcode. |
+| Power cut (binary sensor, problem) | On while NGED lists your postcode in a power cut that has started. Planned work counts from its planned start, and stays on if it overruns until NGED reports it restored. | `power_cuts`: the cuts at your postcode. |
 | Estimated restoration (timestamp sensor) | NGED's estimated restoration time for your postcode. With more than one cut, the latest estimate. Planned work with no estimate uses its planned end. Unknown when there is no cut. | |
 | Nearby power cuts (sensor) | The number of power cuts that have started within the radius, including your own. | `radius_km`; `power_cuts`, nearest first, each with `distance_km`. |
 | Planned power cuts (calendar) | Planned work at your postcode or within the radius that hasn't finished yet. | The usual calendar attributes for the current or next event. |

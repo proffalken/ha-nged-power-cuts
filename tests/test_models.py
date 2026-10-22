@@ -152,6 +152,23 @@ def test_planned_work_that_has_not_started_is_not_a_power_cut_yet() -> None:
     assert [c.id for c in data.relevant] == ["FUTURE"]
 
 
+def test_planned_work_that_overruns_is_still_a_power_cut() -> None:
+    overrun = record(
+        fault_id="OVERRUN",
+        postcode=POSTCODE,
+        planned="true",
+        category="LV PLANNED",
+        planned_outage_start_date="2026-10-22T09:00:00",
+        planned_outage_end_date="2026-10-22T15:00:00",
+    )
+    data = summarise(parse_power_cuts([overrun]), POSTCODE, LAT, LON, 5, NOW)
+
+    assert [c.id for c in data.yours] == ["OVERRUN"]
+    assert [c.id for c, _ in data.nearby] == []
+    # Past its planned end, so it's no longer on the planned work calendar.
+    assert data.planned == []
+
+
 def test_restored_cuts_drop_out_of_the_summary() -> None:
     restored = record(postcode=POSTCODE, date_of_restoration="2026-10-22T22:00:00")
     data = summarise(parse_power_cuts([restored]), POSTCODE, LAT, LON, 5, NOW)

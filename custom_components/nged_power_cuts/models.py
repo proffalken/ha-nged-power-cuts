@@ -231,7 +231,8 @@ def summarise(
         distance = cut.distance_km(latitude, longitude)
         close = distance is not None and distance <= radius_km
 
-        if cut.started(now) and not (cut.planned and cut.finished_by(now)):
+        # Planned work that overruns stays a power cut until NGED restores it.
+        if cut.started(now):
             if affects_you:
                 yours.append(cut)
             if close:

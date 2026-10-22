@@ -29,12 +29,17 @@ class NGEDApiClient:
     async def async_get_power_cuts(self) -> list[PowerCut]:
         """Every power cut in the feed, across all four licence areas."""
         records: list[Any] = []
+        total = 0
         for page in range(MAX_PAGES):
             result = await self._get_page(page * self._page_size)
             batch = result["records"]
             records.extend(batch)
-            if not batch or len(records) >= result.get("total", 0):
+            total = result.get("total", 0)
+            if not batch or len(records) >= total:
                 break
+        # A partial list would make the missing cuts look restored.
+        if len(records) < total:
+            raise NGEDError(f"NGED returned {len(records)} of {total} power cuts")
         return parse_power_cuts(records)
 
     async def _get_page(self, offset: int) -> dict[str, Any]:

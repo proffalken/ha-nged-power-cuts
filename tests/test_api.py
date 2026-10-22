@@ -43,16 +43,24 @@ async def test_pages_through_a_big_feed(client, aioclient_mock) -> None:
     assert aioclient_mock.call_count == 3
 
 
-async def test_stops_on_an_empty_page(client, aioclient_mock) -> None:
+async def test_an_incomplete_feed_is_an_error(client, aioclient_mock) -> None:
+    # A partial list would make the missing cuts look restored.
     client = NGEDApiClient(client._session, page_size=5)
     aioclient_mock.get(
         API_URL, params=_params(0, 5), json=api_response(live_records()[:5], total=99)
     )
     aioclient_mock.get(API_URL, params=_params(5, 5), json=api_response([], total=99))
 
-    cuts = await client.async_get_power_cuts()
+    with pytest.raises(NGEDError):
+        await client.async_get_power_cuts()
 
-    assert len(cuts) == 5
+
+async def test_too_many_pages_is_an_error(client, aioclient_mock) -> None:
+    client = NGEDApiClient(client._session, page_size=1)
+    aioclient_mock.get(API_URL, json=api_response(live_records()[:1], total=10_000))
+
+    with pytest.raises(NGEDError):
+        await client.async_get_power_cuts()
 
 
 @pytest.mark.parametrize(

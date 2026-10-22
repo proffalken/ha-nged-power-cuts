@@ -1,0 +1,17 @@
+{
+  "domain": "nged_power_cuts",
+  "name": "NGED Power Cuts",
+  "codeowners": [
+    "@proffalken"
+  ],
+  "config_flow": true,
+  "documentation": "https://github.com/proffalken/ha-nged-power-cuts",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/proffalken/ha-nged-power-cuts/issues",
+  "loggers": [
+    "custom_components.nged_power_cuts"
+  ],
+  "requirements": [],
+  "version": "0.1.0"
+}

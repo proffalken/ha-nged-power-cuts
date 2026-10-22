@@ -1,0 +1,63 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "NGED power cuts",
+        "description": "Watch National Grid Electricity Distribution's live power cut feed for one home. NGED covers the Midlands, South West England and South Wales. The data comes from [NGED Connected Data]({dataset_url}).",
+        "data": {
+          "postcode": "Postcode",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "radius_km": "Nearby radius"
+        },
+        "data_description": {
+          "postcode": "The home's postcode. NGED lists the postcodes affected by each power cut.",
+          "latitude": "Used to find power cuts near home. Defaults to the Home Assistant location.",
+          "longitude": "Used to find power cuts near home. Defaults to the Home Assistant location.",
+          "radius_km": "Power cuts within this distance of home count as nearby."
+        }
+      }
+    },
+    "error": {
+      "invalid_postcode": "That doesn't look like a UK postcode.",
+      "cannot_connect": "Couldn't reach the NGED power cut feed. Try again later.",
+      "unknown": "Unexpected error. Check the logs."
+    },
+    "abort": {
+      "already_configured": "This postcode is already set up."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NGED power cuts",
+        "data": {
+          "radius_km": "Nearby radius"
+        },
+        "data_description": {
+          "radius_km": "Power cuts within this distance of home count as nearby."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "power_cut": {
+        "name": "Power cut"
+      }
+    },
+    "calendar": {
+      "planned_power_cuts": {
+        "name": "Planned power cuts"
+      }
+    },
+    "sensor": {
+      "estimated_restoration": {
+        "name": "Estimated restoration"
+      },
+      "nearby_power_cuts": {
+        "name": "Nearby power cuts"
+      }
+    }
+  }
+}

@@ -70,6 +70,46 @@ in a straight line.
 
 The feed is polled every 5 minutes.
 
+## Dashboard
+
+The integration adds an **NGED Power Cuts** dashboard type. To create the
+dashboard:
+
+1. Go to **Settings → Dashboards → Add dashboard** and choose **NGED Power Cuts**.
+2. Give it a title and URL, for example `power-cuts`.
+
+The dashboard is rebuilt from the integration's entities every time it opens.
+For each postcode it shows:
+
+- whether the power is on, or the power cuts NGED lists for the postcode,
+  with their estimated restoration times,
+- power cuts within the radius, nearest first,
+- planned work, as a calendar list.
+
+It ends with links to NGED's power cut map and the 105 power cut line.
+
+Its single view is at `/<dashboard URL>/power`, which you can use as a
+notification's tap action, for example `clickAction: /power-cuts/power` in the
+companion app.
+
+If the dashboard shows "Timeout waiting for strategy" straight after you
+install or update, reload the page.
+
+### Options
+
+Edit the dashboard's raw configuration (**⋮ → Raw configuration editor**) to
+set options:
+
+```yaml
+strategy:
+  type: custom:nged-power-cuts
+  title: Power cuts             # dashboard and view title
+  entry_id: 01J...              # only show one postcode
+  links:                        # extra links at the end
+    - name: Power cut checklist
+      url: https://example.com/power-cut
+```
+
 ## Events
 
 `nged_power_cuts_changed` is fired when a power cut at your postcode or within
@@ -136,6 +176,7 @@ actions:
 uv sync
 uv run pytest
 uv run ruff check . && uv run ruff format --check .
+npm test   # dashboard strategy tests (Node's built-in runner, no dependencies)
 ```
 
 `tests/fixtures/power_cuts_live.json` is a real snapshot of the feed from

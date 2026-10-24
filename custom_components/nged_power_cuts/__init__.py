@@ -14,6 +14,7 @@ from .config_flow import radius_km
 from .const import CONF_POSTCODE, DOMAIN
 from .coordinator import PowerCutsCoordinator
 from .dashboard import async_register_dashboard_strategy
+from .places import PostcodesClient
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -36,14 +37,16 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: NGEDPowerCutsConfigEntry
 ) -> bool:
     """Set up NGED Power Cuts from a config entry."""
+    session = async_get_clientsession(hass)
     coordinator = PowerCutsCoordinator(
         hass,
         entry,
-        NGEDApiClient(async_get_clientsession(hass)),
+        NGEDApiClient(session),
         entry.data[CONF_POSTCODE],
         entry.data[CONF_LATITUDE],
         entry.data[CONF_LONGITUDE],
         radius_km(entry),
+        places_client=PostcodesClient(session),
     )
     await coordinator.async_config_entry_first_refresh()
 

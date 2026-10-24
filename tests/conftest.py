@@ -74,7 +74,7 @@ def mock_config_entry(hass) -> MockConfigEntry:
     """A config entry for the test home."""
     entry = MockConfigEntry(
         domain=DOMAIN,
-        title=f"NGED power cuts {POSTCODE}",
+        title="Home",
         data={
             CONF_POSTCODE: POSTCODE,
             "latitude": LAT,

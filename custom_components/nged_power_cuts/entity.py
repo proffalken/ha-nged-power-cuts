@@ -22,7 +22,7 @@ class NGEDPowerCutsEntity(CoordinatorEntity[PowerCutsCoordinator]):
         self._attr_unique_id = f"{entry.entry_id}_{key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name=f"Power cuts {coordinator.postcode}",
+            name=f"Power cuts {entry.title}",
             manufacturer="National Grid Electricity Distribution",
             model="Live power cuts",
             entry_type=DeviceEntryType.SERVICE,

@@ -34,4 +34,8 @@ class PowerCutBinarySensor(NGEDPowerCutsEntity, BinarySensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"power_cuts": [c.as_dict() for c in self.coordinator.data.yours]}
+        return {
+            "power_cuts": [
+                self.coordinator.describe(c) for c in self.coordinator.data.yours
+            ]
+        }

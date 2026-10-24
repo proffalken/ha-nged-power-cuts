@@ -11,7 +11,8 @@ from custom_components.nged_power_cuts.const import API_URL, DOMAIN
 from custom_components.nged_power_cuts.diagnostics import (
     async_get_config_entry_diagnostics,
 )
-from tests.conftest import LAT, LON, POSTCODE, api_response, live_records
+from custom_components.nged_power_cuts.places import BULK_URL
+from tests.conftest import LAT, LON, POSTCODE, api_response, live_records, load_fixture
 
 NOW = "2026-10-22T21:30:00+00:00"
 
@@ -35,6 +36,7 @@ def frozen_now(freezer) -> None:
 
 async def _setup(hass, entry, aioclient_mock, records) -> None:
     aioclient_mock.get(API_URL, json=api_response(records))
+    aioclient_mock.post(BULK_URL, json=load_fixture("postcodes_bulk.json"))
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
@@ -186,3 +188,28 @@ async def test_diagnostics_redact_the_home(
     assert str(LAT) not in text
     assert diagnostics["summary"]["total"] == 1
     assert diagnostics["summary"]["yours"] == 1
+
+
+async def test_power_cut_attributes_name_the_places(
+    hass, mock_config_entry, aioclient_mock
+) -> None:
+    await _setup(hass, mock_config_entry, aioclient_mock, [_fault()])
+
+    state = hass.states.get(_entity_id(hass, "power_cut", "binary_sensor"))
+
+    (cut,) = state.attributes["power_cuts"]
+    assert cut["place_summary"] == "Butetown (Cardiff)"
+    assert cut["customers_off"] == 107
+
+
+async def test_device_is_named_after_the_entry(
+    hass, mock_config_entry, aioclient_mock
+) -> None:
+    from homeassistant.helpers import device_registry as dr
+
+    await _setup(hass, mock_config_entry, aioclient_mock, live_records())
+
+    (device,) = dr.async_entries_for_config_entry(
+        dr.async_get(hass), mock_config_entry.entry_id
+    )
+    assert device.name == f"Power cuts {mock_config_entry.title}"

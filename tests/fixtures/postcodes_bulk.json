@@ -1,0 +1,69 @@
+{
+ "status": 200,
+ "result": [
+  {
+   "query": "GL16 8AA",
+   "result": {
+    "postcode": "GL16 8AA",
+    "latitude": 51.793525,
+    "longitude": -2.616868,
+    "country": "England",
+    "admin_district": "Forest of Dean",
+    "admin_ward": "Coleford",
+    "parish": "Coleford"
+   }
+  },
+  {
+   "query": "GL16 7JG",
+   "result": {
+    "postcode": "GL16 7JG",
+    "latitude": 51.794179,
+    "longitude": -2.599911,
+    "country": "England",
+    "admin_district": "Forest of Dean",
+    "admin_ward": "Coleford",
+    "parish": "Coleford"
+   }
+  },
+  {
+   "query": "GL16 8QA",
+   "result": {
+    "postcode": "GL16 8QA",
+    "latitude": 51.779114,
+    "longitude": -2.607727,
+    "country": "England",
+    "admin_district": "Forest of Dean",
+    "admin_ward": "Coleford",
+    "parish": "Coleford"
+   }
+  },
+  {
+   "query": "HR9 6JL",
+   "result": {
+    "postcode": "HR9 6JL",
+    "latitude": 51.840336,
+    "longitude": -2.638264,
+    "country": "England",
+    "admin_district": "Herefordshire, County of",
+    "admin_ward": "Kerne Bridge",
+    "parish": "Goodrich"
+   }
+  },
+  {
+   "query": "CF10 4RP",
+   "result": {
+    "postcode": "CF10 4RP",
+    "latitude": 51.457513,
+    "longitude": -3.151874,
+    "country": "Wales",
+    "admin_district": "Cardiff",
+    "admin_ward": "Butetown",
+    "parish": "Butetown"
+   }
+  },
+  {
+   "query": "ZZ1 1ZZ",
+   "result": null
+  }
+ ]
+}

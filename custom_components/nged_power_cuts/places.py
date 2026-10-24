@@ -96,9 +96,17 @@ class PostcodesClient:
         for start in range(0, len(wanted), BATCH_SIZE):
             batch = wanted[start : start + BATCH_SIZE]
             body = await self._request("post", BULK_URL, json={"postcodes": batch})
-            for item in body.get("result") or []:
-                if isinstance(item, dict) and item.get("query"):
-                    places[item["query"]] = place_from_result(item.get("result"))
+            found = {
+                item["query"]: place_from_result(item.get("result"))
+                for item in body.get("result") or []
+                if isinstance(item, dict) and item.get("query")
+            }
+            # A missing answer isn't "unknown postcode"; ask again next time.
+            if missing := set(batch) - found.keys():
+                raise PostcodesError(
+                    f"postcodes.io left out {len(missing)} of {len(batch)} postcodes"
+                )
+            places.update(found)
         return places
 
     async def async_locate(self, postcode: str) -> tuple[float, float] | None:

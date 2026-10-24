@@ -90,11 +90,26 @@ async def test_bulk_lookup(hass, aioclient_mock) -> None:
     assert places["ZZ1 1ZZ"] is None
 
 
+async def _echo(method, url, data):
+    from pytest_homeassistant_custom_component.test_util.aiohttp import (
+        AiohttpClientMockResponse,
+    )
+
+    return AiohttpClientMockResponse(
+        method,
+        url,
+        json={"result": [{"query": pc, "result": None} for pc in data["postcodes"]]},
+    )
+
+
 async def test_bulk_lookup_splits_into_batches_of_100(hass, aioclient_mock) -> None:
-    aioclient_mock.post(BULK_URL, json={"status": 200, "result": []})
+    # Every postcode must come back, so answer each batch in full.
+    aioclient_mock.post(BULK_URL, side_effect=_echo)
     client = PostcodesClient(async_get_clientsession(hass))
 
-    await client.async_lookup([f"GL{i} 1AA" for i in range(250)])
+    places = await client.async_lookup([f"GL{i} 1AA" for i in range(250)])
+
+    assert len(places) == 250
 
     assert aioclient_mock.call_count == 3
 
@@ -131,3 +146,11 @@ async def test_locate_an_unknown_postcode(hass, aioclient_mock) -> None:
     client = PostcodesClient(async_get_clientsession(hass))
 
     assert await client.async_locate("ZZ1 1ZZ") is None
+
+
+async def test_incomplete_bulk_responses_raise(hass, aioclient_mock) -> None:
+    aioclient_mock.post(BULK_URL, json=load_fixture("postcodes_bulk.json"))
+    client = PostcodesClient(async_get_clientsession(hass))
+
+    with pytest.raises(PostcodesError):
+        await client.async_lookup(["GL16 8AA", "NP25 3BG"])

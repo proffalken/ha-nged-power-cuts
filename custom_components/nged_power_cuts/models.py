@@ -79,6 +79,7 @@ class PowerCut:
     planned_end: datetime | None
     planned_reason: str | None
     psr_customers: int | None
+    customers_off: int | None
     last_updated: datetime | None
     raw: dict[str, Any] = field(compare=False, repr=False, hash=False)
 
@@ -140,6 +141,7 @@ class PowerCut:
             "planned_start": _iso(self.planned_start),
             "planned_end": _iso(self.planned_end),
             "psr_customers": self.psr_customers,
+            "customers_off": self.customers_off,
             "postcodes": sorted(self.postcodes),
         }
         if distance_km is not None:
@@ -182,6 +184,9 @@ def _parse_record(record: Any) -> PowerCut | None:
         planned_end=parse_nged_time(record.get("planned_outage_end_date")),
         planned_reason=record.get("planned_outage_reason") or None,
         psr_customers=_int(record.get("number_of_psr_customers")),
+        customers_off=_int(
+            record.get("planned_outage_off" if planned else "confirmed_off")
+        ),
         last_updated=parse_nged_time(record.get("last_updated")),
         raw=record,
     )

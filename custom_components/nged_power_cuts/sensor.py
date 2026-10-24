@@ -63,5 +63,7 @@ class NearbyPowerCutsSensor(NGEDPowerCutsEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             "radius_km": self.coordinator.radius_km,
-            "power_cuts": [c.as_dict(d) for c, d in self.coordinator.data.nearby],
+            "power_cuts": [
+                self.coordinator.describe(c, d) for c, d in self.coordinator.data.nearby
+            ],
         }

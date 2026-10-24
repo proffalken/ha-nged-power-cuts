@@ -38,6 +38,11 @@ function deviceName(hass, deviceId) {
   return device.name_by_user || device.name || "Power cuts";
 }
 
+// "Power cuts Lily's work" -> "Lily's work", for headings that say "Near ...".
+function placeName(hass, deviceId) {
+  return deviceName(hass, deviceId).replace(/^Power cuts /, "");
+}
+
 // Jinja for a feed time, or a fallback when NGED gave none.
 function time(expr, fallback) {
   return `{{ (as_timestamp(${expr}) | timestamp_custom('${TIME_FORMAT}')) if ${expr} else '${fallback}' }}`;
@@ -56,9 +61,10 @@ function statusContent(cutId, restorationId) {
 NGED expects power back by {{ (as_timestamp(etr) | timestamp_custom('${TIME_FORMAT}')) if etr not in ['unknown', 'unavailable'] else 'an unknown time' }}.
 </ha-alert>
 {% for c in cuts %}
-**{{ c.id }}**: {{ 'planned work' if c.planned else 'fault' }} ({{ c.category or 'unknown type' }})<br>
+**{{ c.place_summary or c.id }}**: {{ 'planned work' if c.planned else 'fault' }} ({{ c.category or 'unknown type' }}){% if c.customers_off %}, {{ c.customers_off }} customers off{% endif %}<br>
 {% if c.planned %}Planned ${time("c.planned_start", "start not given")} to ${time("c.planned_end", "end not given")}{% else %}Reported ${time("c.reported", "at an unknown time")}{% endif %}<br>
-Estimated restoration: ${time("c.estimated_restoration", "not given")}
+Estimated restoration: ${time("c.estimated_restoration", "not given")}<br>
+NGED reference {{ c.id }}
 {% if c.psr_customers %}<br>{{ c.psr_customers }} Priority Services Register customers affected{% endif %}
 
 {% endfor %}
@@ -74,12 +80,16 @@ Nearby power cut data is unavailable right now.
 No power cuts within {{ '%g' | format(radius | float(0)) }} km.
 {% else %}
 {% for c in cuts %}
-- **{{ c.distance_km }} km**: {{ c.id }}, {{ 'planned work' if c.planned else 'fault' }}, {{ c.postcodes | count }} postcode{{ '' if c.postcodes | count == 1 else 's' }}. Restoration: ${time("c.estimated_restoration", "no estimate")}
+- **{{ c.distance_km }} km**: {{ c.place_summary or c.id }}, {{ 'planned work' if c.planned else 'fault' }}{% if c.customers_off %}, {{ c.customers_off }} customers off{% endif %} ({{ (c.postcode_sectors or c.postcodes) | join(', ') }}). Restoration: ${time("c.estimated_restoration", "no estimate")}
 {% endfor %}
 {% endif %}`;
 }
 
-function homeSections(hass, deviceId, entities) {
+function radiusOf(hass, entityId) {
+  return hass.states?.[entityId]?.attributes?.radius_km;
+}
+
+function homeSections(hass, deviceId, entities, several) {
   const cut = byKey(entities, "power_cut");
   const restoration = byKey(entities, "estimated_restoration");
   const nearby = byKey(entities, "nearby_power_cuts");
@@ -95,11 +105,11 @@ function homeSections(hass, deviceId, entities) {
       ],
     });
   }
-  if (nearby) {
+  if (nearby && radiusOf(hass, nearby) !== 0) {
     sections.push({
       type: "grid",
       cards: [
-        { type: "heading", heading: "Nearby" },
+        { type: "heading", heading: several ? `Near ${placeName(hass, deviceId)}` : "Nearby" },
         { type: "markdown", content: nearbyContent(nearby) },
       ],
     });
@@ -158,7 +168,10 @@ export async function generateDashboard(config, hass) {
     deviceName(hass, a).localeCompare(deviceName(hass, b)),
   );
 
-  const sections = homes.flatMap(([deviceId, list]) => homeSections(hass, deviceId, list));
+  const several = homes.length > 1;
+  const sections = homes.flatMap(([deviceId, list]) =>
+    homeSections(hass, deviceId, list, several),
+  );
   sections.push({
     type: "grid",
     cards: [

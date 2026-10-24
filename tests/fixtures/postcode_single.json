@@ -1,0 +1,12 @@
+{
+ "status": 200,
+ "result": {
+  "postcode": "HR9 6JL",
+  "latitude": 51.840336,
+  "longitude": -2.638264,
+  "country": "England",
+  "admin_district": "Herefordshire, County of",
+  "admin_ward": "Kerne Bridge",
+  "parish": "Goodrich"
+ }
+}

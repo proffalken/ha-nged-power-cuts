@@ -12,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigFlowResult,
     OptionsFlow,
 )
-from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE
+from homeassistant.const import CONF_LATITUDE, CONF_LONGITUDE, CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -31,6 +31,7 @@ from .const import (
     DOMAIN,
 )
 from .models import normalise_postcode
+from .places import PostcodesClient, PostcodesError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,9 +48,14 @@ def radius_km(entry: ConfigEntry) -> float:
 
 
 class NGEDPowerCutsConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Set up one home: its postcode, where it is, and how far is "nearby"."""
+    """Set up one place: its postcode, where it is, and how far is "nearby"."""
 
     VERSION = 1
+
+    def __init__(self) -> None:
+        self._title = ""
+        self._data: dict[str, Any] = {}
+        self._located: tuple[float, float] | None = None
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -63,40 +69,35 @@ class NGEDPowerCutsConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 await self.async_set_unique_id(postcode)
                 self._abort_if_unique_id_configured()
+                session = async_get_clientsession(self.hass)
                 try:
-                    await NGEDApiClient(
-                        async_get_clientsession(self.hass)
-                    ).async_get_power_cuts()
+                    await NGEDApiClient(session).async_get_power_cuts()
                 except NGEDError:
                     errors["base"] = "cannot_connect"
                 except Exception:
                     _LOGGER.exception("Unexpected error checking the NGED feed")
                     errors["base"] = "unknown"
                 else:
-                    return self.async_create_entry(
-                        title=postcode,
-                        data={
-                            CONF_POSTCODE: postcode,
-                            CONF_LATITUDE: user_input[CONF_LATITUDE],
-                            CONF_LONGITUDE: user_input[CONF_LONGITUDE],
-                            CONF_RADIUS_KM: user_input[CONF_RADIUS_KM],
-                        },
-                    )
+                    self._title = (user_input.get(CONF_NAME) or "").strip() or postcode
+                    self._data = {
+                        CONF_POSTCODE: postcode,
+                        CONF_RADIUS_KM: user_input[CONF_RADIUS_KM],
+                    }
+                    try:
+                        self._located = await PostcodesClient(session).async_locate(
+                            postcode
+                        )
+                    except PostcodesError as err:
+                        _LOGGER.debug("Couldn't find where %s is: %s", postcode, err)
+                    return await self.async_step_location()
 
         defaults = user_input or {}
         schema = vol.Schema(
             {
+                vol.Optional(CONF_NAME, default=defaults.get(CONF_NAME, "")): str,
                 vol.Required(
                     CONF_POSTCODE, default=defaults.get(CONF_POSTCODE, "")
                 ): str,
-                vol.Required(
-                    CONF_LATITUDE,
-                    default=defaults.get(CONF_LATITUDE, self.hass.config.latitude),
-                ): cv.latitude,
-                vol.Required(
-                    CONF_LONGITUDE,
-                    default=defaults.get(CONF_LONGITUDE, self.hass.config.longitude),
-                ): cv.longitude,
                 vol.Required(
                     CONF_RADIUS_KM,
                     default=defaults.get(CONF_RADIUS_KM, DEFAULT_RADIUS_KM),
@@ -108,6 +109,37 @@ class NGEDPowerCutsConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=schema,
             errors=errors,
             description_placeholders={"dataset_url": DATASET_URL},
+        )
+
+    async def async_step_location(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm where the place is, defaulting to the postcode's location."""
+        if user_input is not None:
+            return self.async_create_entry(
+                title=self._title,
+                data={
+                    CONF_POSTCODE: self._data[CONF_POSTCODE],
+                    CONF_LATITUDE: user_input[CONF_LATITUDE],
+                    CONF_LONGITUDE: user_input[CONF_LONGITUDE],
+                    CONF_RADIUS_KM: self._data[CONF_RADIUS_KM],
+                },
+            )
+
+        lat, lon = self._located or (
+            self.hass.config.latitude,
+            self.hass.config.longitude,
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_LATITUDE, default=lat): cv.latitude,
+                vol.Required(CONF_LONGITUDE, default=lon): cv.longitude,
+            }
+        )
+        return self.async_show_form(
+            step_id="location",
+            data_schema=schema,
+            description_placeholders={"postcode": self._data[CONF_POSTCODE]},
         )
 
     @staticmethod

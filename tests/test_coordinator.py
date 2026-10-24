@@ -10,6 +10,7 @@ from custom_components.nged_power_cuts.api import NGEDError
 from custom_components.nged_power_cuts.const import EVENT_POWER_CUT_CHANGED
 from custom_components.nged_power_cuts.coordinator import PowerCutsCoordinator
 from custom_components.nged_power_cuts.models import parse_power_cuts
+from custom_components.nged_power_cuts.places import Place, PostcodesError
 from tests.conftest import LAT, LON, POSTCODE, live_records
 
 NOW = "2026-10-22T21:30:00+00:00"
@@ -31,7 +32,9 @@ def _client(*polls: list[dict]) -> AsyncMock:
 
 
 def _coordinator(hass, entry, client) -> PowerCutsCoordinator:
-    return PowerCutsCoordinator(hass, entry, client, POSTCODE, LAT, LON, 5)
+    return PowerCutsCoordinator(
+        hass, entry, client, POSTCODE, LAT, LON, 5, places_client=_places_client()
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -132,3 +135,106 @@ async def test_event_when_planned_work_starts(hass, mock_config_entry, freezer) 
 
     assert [c.id for c in data.yours] == ["PLANNED"]
     assert [e.data["change"] for e in events] == ["new", "started"]
+
+
+def _places_client(places=None, error=None) -> AsyncMock:
+    client = AsyncMock()
+    if error:
+        client.async_lookup.side_effect = error
+    else:
+        client.async_lookup.return_value = places or {}
+    return client
+
+
+async def test_events_name_the_location_and_places(hass, mock_config_entry) -> None:
+    events = async_capture_events(hass, EVENT_POWER_CUT_CHANGED)
+    places = _places_client(
+        {
+            POSTCODE: Place("Butetown", "Cardiff"),
+            "CF10 4RQ": Place("Butetown", "Cardiff"),
+        }
+    )
+    coordinator = PowerCutsCoordinator(
+        hass,
+        mock_config_entry,
+        _client(live_records(), [*live_records(), fault()]),
+        POSTCODE,
+        LAT,
+        LON,
+        5,
+        places_client=places,
+    )
+
+    await coordinator._async_update_data()
+    await coordinator._async_update_data()
+    await hass.async_block_till_done()
+
+    (event,) = events
+    assert event.data["location"] == mock_config_entry.title
+    assert event.data["places"] == ["Butetown"]
+    assert event.data["place_summary"] == "Butetown (Cardiff)"
+    assert event.data["postcode_sectors"] == ["CF10 4"]
+    assert event.data["customers_off"] == 107
+
+
+async def test_places_are_looked_up_once(hass, mock_config_entry) -> None:
+    places = _places_client({POSTCODE: Place("Butetown", "Cardiff")})
+    coordinator = PowerCutsCoordinator(
+        hass,
+        mock_config_entry,
+        _client([fault()], [fault()]),
+        POSTCODE,
+        LAT,
+        LON,
+        5,
+        places_client=places,
+    )
+
+    await coordinator._async_update_data()
+    await coordinator._async_update_data()
+
+    assert places.async_lookup.await_count == 1
+    (looked_up,) = places.async_lookup.await_args.args
+    assert sorted(looked_up) == [POSTCODE, "CF10 4RQ"]
+
+
+async def test_place_lookup_failures_still_notify(hass, mock_config_entry) -> None:
+    events = async_capture_events(hass, EVENT_POWER_CUT_CHANGED)
+    coordinator = PowerCutsCoordinator(
+        hass,
+        mock_config_entry,
+        _client([], [fault()]),
+        POSTCODE,
+        LAT,
+        LON,
+        5,
+        places_client=_places_client(error=PostcodesError("down")),
+    )
+
+    await coordinator._async_update_data()
+    await coordinator._async_update_data()
+    await hass.async_block_till_done()
+
+    (event,) = events
+    assert event.data["places"] == []
+    assert event.data["place_summary"] is None
+    assert event.data["postcode_sectors"] == ["CF10 4"]
+
+
+async def test_describe_adds_places_for_attributes(hass, mock_config_entry) -> None:
+    coordinator = PowerCutsCoordinator(
+        hass,
+        mock_config_entry,
+        _client([fault()]),
+        POSTCODE,
+        LAT,
+        LON,
+        5,
+        places_client=_places_client({POSTCODE: Place("Butetown", "Cardiff")}),
+    )
+    data = await coordinator._async_update_data()
+
+    info = coordinator.describe(data.yours[0], 1.234)
+
+    assert info["place_summary"] == "Butetown (Cardiff)"
+    assert info["distance_km"] == 1.2

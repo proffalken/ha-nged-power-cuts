@@ -40,17 +40,18 @@ Go to **Settings → Devices & services → Add integration → NGED Power Cuts*
 
 | Field | What it is for |
 | --- | --- |
-| Postcode | Your home's postcode. NGED lists the postcodes affected by each power cut, and the power cut sensor matches on this. |
-| Latitude / longitude | Used to find power cuts near home. Defaults to the Home Assistant location. |
-| Nearby radius | Power cuts within this distance of home count as nearby. Defaults to 5 km. |
+| Name | Optional, for example "Home" or "Lily's work". It names the device and appears in events as `location`. Defaults to the postcode. |
+| Postcode | The place's postcode. NGED lists the postcodes affected by each power cut, and the power cut sensor matches on this. |
+| Nearby radius | Power cuts within this distance of the place count as nearby. Defaults to 5 km. Use 0 to watch only the postcode itself. |
+| Latitude / longitude | Asked for on the next screen. Used to measure how far away power cuts are. Defaults to where the postcode is, from [postcodes.io](https://postcodes.io), or the Home Assistant location if it can't be found. |
 
-You can add more than one postcode, for example a relative's home. Each
-postcode is a separate entry. You can change the radius later under
-**Configure**.
+You can add more than one place, for example a relative's home or someone's
+work. Each postcode is a separate entry. You can change the radius later under
+**Configure**, and rename the entry to change the name used in events.
 
 ## Entities
 
-Each postcode gets one device, **Power cuts &lt;postcode&gt;**, with these
+Each place gets one device, **Power cuts &lt;name&gt;**, with these
 entities.
 
 | Entity | State | Attributes |
@@ -63,7 +64,21 @@ entities.
 Each power cut in the attributes has `id` (NGED's reference), `area`,
 `status`, `category`, `planned`, `reported`, `estimated_restoration`,
 `planned_start`, `planned_end`, `psr_customers` (the number of customers on the
-Priority Services Register affected), and `postcodes`.
+Priority Services Register affected), `customers_off` (customers NGED has
+confirmed are off, or the number planned work will affect), and `postcodes`.
+
+The power cut and nearby sensors also give, for each cut:
+
+- `places`: the parishes (or council wards) of the affected postcodes, most
+  affected first,
+- `place_summary`: a short description such as "Coleford (Forest of Dean)",
+- `postcode_sectors`: such as `GL16 7`, a shorter way to say where it is than
+  the full postcode list.
+
+NGED's feed has no place names. They come from [postcodes.io](https://postcodes.io),
+which only receives the postcodes of power cuts (and, during setup, your own
+postcode to find where it is). If it can't be reached, `places` is empty,
+`place_summary` is `null`, and it is tried again on the next poll.
 
 Distance is measured from your location to the point NGED gives for the cut,
 in a straight line.
@@ -119,10 +134,11 @@ starts, so a restart doesn't re-announce power cuts it already knew about.
 | Field | Meaning |
 | --- | --- |
 | `config_entry_id` | The entry the event belongs to. |
+| `location` | The entry's name, for example "Lily's work". |
 | `change` | `new`, `updated` (status, category, times or postcodes changed), `started` (planned work has reached its start time) or `restored` (it left the feed). |
 | `affects_you` | `true` if your postcode is listed. |
-| `distance_km` | Distance from home, if NGED gave a location. |
-| | Plus every power cut field listed under **Entities**. |
+| `distance_km` | Distance from the place, if NGED gave a location. |
+| | Plus every power cut field listed under **Entities**, including `places`, `place_summary` and `postcode_sectors`. |
 
 ## Example automations
 
@@ -138,9 +154,10 @@ triggers:
 actions:
   - action: notify.mobile_app_your_phone
     data:
-      title: "Power cut {{ trigger.event.data.change }}"
+      title: "Power cut at {{ trigger.event.data.location }}: {{ trigger.event.data.change }}"
       message: >-
-        NGED {{ trigger.event.data.id }} ({{ trigger.event.data.category }}).
+        {{ trigger.event.data.place_summary or trigger.event.data.id }}
+        ({{ trigger.event.data.category }}).
         {% if trigger.event.data.estimated_restoration %}
         Estimated restoration
         {{ as_datetime(trigger.event.data.estimated_restoration) | as_local }}.
@@ -188,6 +205,10 @@ npm test   # dashboard strategy tests (Node's built-in runner, no dependencies)
 Supported by WPD Open Data. The power cut data comes from the
 [Live Power Cuts](https://connecteddata.nationalgrid.co.uk/dataset/live-power-cuts)
 dataset on NGED Connected Data, published under the WPD Open Data Licence.
+
+Place names come from [postcodes.io](https://postcodes.io), which uses Office
+for National Statistics data (Open Government Licence; contains OS data ©
+Crown copyright and database right).
 
 This integration isn't made or endorsed by National Grid.
 

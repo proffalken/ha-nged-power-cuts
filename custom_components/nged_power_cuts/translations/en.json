@@ -3,18 +3,24 @@
     "step": {
       "user": {
         "title": "NGED power cuts",
-        "description": "Watch National Grid Electricity Distribution's live power cut feed for one home. NGED covers the Midlands, South West England and South Wales. The data comes from [NGED Connected Data]({dataset_url}).",
+        "description": "Watch National Grid Electricity Distribution's live power cut feed for one place, such as home or a family member's work. NGED covers the Midlands, South West England and South Wales. The data comes from [NGED Connected Data]({dataset_url}). Place names for power cuts come from postcodes.io.",
         "data": {
+          "name": "Name",
           "postcode": "Postcode",
-          "latitude": "Latitude",
-          "longitude": "Longitude",
           "radius_km": "Nearby radius"
         },
         "data_description": {
-          "postcode": "The home's postcode. NGED lists the postcodes affected by each power cut.",
-          "latitude": "Used to find power cuts near home. Defaults to the Home Assistant location.",
-          "longitude": "Used to find power cuts near home. Defaults to the Home Assistant location.",
-          "radius_km": "Power cuts within this distance of home count as nearby."
+          "name": "Optional, for example \"Home\" or \"Lily's work\". Used in notifications. Defaults to the postcode.",
+          "postcode": "The place's postcode. NGED lists the postcodes affected by each power cut.",
+          "radius_km": "Power cuts within this distance of the place count as nearby. Use 0 to only watch the postcode itself."
+        }
+      },
+      "location": {
+        "title": "Where is it?",
+        "description": "This is where {postcode} is, from postcodes.io (or the Home Assistant location if it couldn't be found). Change it if needed. It is used to measure how far away power cuts are.",
+        "data": {
+          "latitude": "Latitude",
+          "longitude": "Longitude"
         }
       }
     },
@@ -35,7 +41,7 @@
           "radius_km": "Nearby radius"
         },
         "data_description": {
-          "radius_km": "Power cuts within this distance of home count as nearby."
+          "radius_km": "Power cuts within this distance of the place count as nearby."
         }
       }
     }

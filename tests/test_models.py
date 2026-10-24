@@ -199,3 +199,14 @@ def test_as_dict_for_attributes() -> None:
     assert info["distance_km"] == 12.3
     assert info["planned"] is False
     assert isinstance(info["postcodes"], list)
+
+
+def test_customers_off() -> None:
+    (unplanned,) = parse_power_cuts([record()])
+    (planned,) = parse_power_cuts(
+        [record(planned="true", confirmed_off=0, planned_outage_off=12)]
+    )
+
+    assert unplanned.customers_off == 107
+    assert unplanned.as_dict()["customers_off"] == 107
+    assert planned.customers_off == 12

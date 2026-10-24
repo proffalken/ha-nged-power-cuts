@@ -81,6 +81,31 @@ describe("generateDashboard", () => {
     assert.match(content, /distance_km/);
   });
 
+  it("names the places and customers affected", async () => {
+    const [view] = (await generateDashboard({}, makeHass())).views;
+    const text = markdown(view);
+    assert.match(text, /c\.place_summary/);
+    assert.match(text, /c\.customers_off/);
+  });
+
+  it("names each place's nearby section when there are several", async () => {
+    const [view] = (await generateDashboard({}, makeHass({ second: true }))).views;
+    const headings = view.sections.map((s) => s.cards[0].heading);
+    assert.ok(headings.includes("Near NP25 3BG"));
+    assert.ok(headings.includes("Near Mum's"));
+    assert.ok(!headings.includes("Nearby"));
+  });
+
+  it("leaves out the nearby section when the radius is 0", async () => {
+    const hass = makeHass();
+    hass.states["sensor.power_cuts_np25_3bg_nearby_power_cuts"] = {
+      state: "0",
+      attributes: { radius_km: 0 },
+    };
+    const [view] = (await generateDashboard({}, hass)).views;
+    assert.ok(!view.sections.some((s) => s.cards[0].heading === "Nearby"));
+  });
+
   it("shows planned work as a calendar list", async () => {
     const [view] = (await generateDashboard({}, makeHass())).views;
     const [calendar] = findCards(view, "calendar");

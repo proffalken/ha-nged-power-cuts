@@ -57,10 +57,11 @@ class PlannedPowerCutsCalendar(NGEDPowerCutsEntity, CalendarEntity):
         if end <= start:
             end = start + _DEFAULT_LENGTH
         coordinator = self.coordinator
+        place = coordinator.config_entry.title
         where = (
             f"Your postcode ({coordinator.postcode})"
             if coordinator.postcode in cut.postcodes
-            else f"Within {coordinator.radius_km:g} km of home"
+            else f"Within {coordinator.radius_km:g} km of {place}"
         )
         lines = [
             where,
@@ -74,5 +75,6 @@ class PlannedPowerCutsCalendar(NGEDPowerCutsEntity, CalendarEntity):
             end=end,
             summary=f"Planned power cut ({cut.category or 'NGED'})",
             description="\n".join(lines),
+            location=coordinator.describe(cut)["place_summary"],
             uid=cut.id,
         )
